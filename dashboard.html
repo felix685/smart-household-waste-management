@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Waste Management</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span>♻️</span>Waste Management<br><small style="font-weight:400;font-size:.75rem;">Household Portal</small></div>
+    <nav class="sidebar-nav">
+      <a href="#" class="active" onclick="showSection('overview',this)"><span class="nav-icon">🏠</span> Overview</a>
+      <a href="#" onclick="showSection('collections',this)"><span class="nav-icon">📦</span> Collections</a>
+      <a href="#" onclick="showSection('transportation',this)"><span class="nav-icon">🚛</span> Transportation</a>
+      <a href="#" onclick="showSection('wastebins',this)"><span class="nav-icon">🗑️</span> Waste Bins</a>
+      <a href="#" onclick="showSection('qa',this)"><span class="nav-icon">💬</span> Q&amp;A Forum</a>
+      <a href="#" onclick="showSection('analytics',this)"><span class="nav-icon">📊</span> Analytics</a>
+      <a href="#" onclick="showSection('profile',this)"><span class="nav-icon">👤</span> My Profile</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-username">—</div>
+      <button class="btn btn-secondary btn-block btn-sm" onclick="logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="topbar">
+      <h1 id="topbar-title">Overview</h1>
+      <span class="text-muted" id="topbar-date"></span>
+    </div>
+    <div class="page-body">
+      <div id="global-alert"></div>
+
+      <!-- ═══ OVERVIEW ═══ -->
+      <section id="sec-overview">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="ov-collections">—</div><div class="stat-label">Total Collections</div></div>
+          <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-value" id="ov-weight">—</div><div class="stat-label">Total kg Recycled</div></div>
+          <div class="stat-card"><div class="stat-icon">🚛</div><div class="stat-value" id="ov-trips">—</div><div class="stat-label">Scheduled Trips</div></div>
+          <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-value" id="ov-qa">—</div><div class="stat-label">My Questions</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Collections</div>
+          <div class="table-wrap" id="ov-recent-table"><p class="text-muted">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ COLLECTIONS ═══ -->
+      <section id="sec-collections" class="hidden">
+        <div class="toolbar">
+          <div class="search-bar" style="flex:1;max-width:360px;">
+            <input type="text" id="col-search" placeholder="Search by date…" oninput="filterCollections()" />
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-add-collection')">➕ Add Collection</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Collection Records</div>
+          <div class="table-wrap" id="col-table"><p class="text-muted">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ TRANSPORTATION ═══ -->
+      <section id="sec-transportation" class="hidden">
+        <div class="toolbar">
+          <div class="search-bar" style="flex:1;max-width:360px;">
+            <input type="text" id="trans-search" placeholder="Search by bin location…" oninput="filterTransportation()" />
+          </div>
+          <button class="btn btn-primary" onclick="openModal('modal-add-transport')">➕ Schedule Pickup</button>
+        </div>
+        <div class="card">
+          <div class="card-title">My Scheduled Pickups</div>
+          <div class="table-wrap" id="trans-table"><p class="text-muted">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ WASTE BINS ═══ -->
+      <section id="sec-wastebins" class="hidden">
+        <div class="search-bar" style="max-width:360px;">
+          <input type="text" id="bin-search" placeholder="Search by location or type…" oninput="filterBins()" />
+          <button class="btn btn-secondary" onclick="filterBins()">🔍</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Available Waste Bins</div>
+          <div class="table-wrap" id="bin-table"><p class="text-muted">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ Q&A ═══ -->
+      <section id="sec-qa" class="hidden">
+        <div class="toolbar">
+          <h3 style="font-size:1rem;">Your Questions &amp; Admin Replies</h3>
+          <button class="btn btn-primary" onclick="openModal('modal-add-qa')">❓ Ask a Question</button>
+        </div>
+        <div id="qa-list"><p class="text-muted">Loading…</p></div>
+      </section>
+
+      <!-- ═══ ANALYTICS ═══ -->
+      <section id="sec-analytics" class="hidden">
+        <div class="charts-grid">
+          <div class="chart-card"><h3>📈 Collection Over Time (kg)</h3><canvas id="chart-time"></canvas></div>
+          <div class="chart-card"><h3>🗂️ By Recyclable Type</h3><canvas id="chart-type"></canvas></div>
+          <div class="chart-card"><h3>☣️ Toxic vs Non-Toxic</h3><canvas id="chart-toxic"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ═══ PROFILE ═══ -->
+      <section id="sec-profile" class="hidden">
+        <div class="card" style="max-width:520px;">
+          <div class="card-title">My Profile</div>
+          <div id="profile-alert"></div>
+          <form onsubmit="updateProfile(event)">
+            <div class="form-group"><label>Name</label><input type="text" id="prof-name" /></div>
+            <div class="form-group"><label>Address</label><input type="text" id="prof-address" /></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="prof-phone" /></div>
+            <div class="form-group"><label>New Password <span class="text-muted">(leave blank to keep current)</span></label><input type="password" id="prof-password" placeholder="New password…" /></div>
+            <button class="btn btn-primary" type="submit">💾 Save Changes</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- Add Collection -->
+<div class="modal-overlay hidden" id="modal-add-collection">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📦 Add Collection Record</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-collection')">✕</button>
+    </div>
+    <div id="col-modal-alert"></div>
+    <form onsubmit="submitCollection(event)">
+      <div class="form-group"><label>Date</label><input type="date" id="col-date" required /></div>
+      <div class="form-group"><label>Total Amount (kg)</label><input type="number" step="0.01" id="col-amount" required placeholder="e.g. 12.5" /></div>
+      <div class="form-group">
+        <label>Recyclable Types &amp; Weights</label>
+        <div id="col-type-rows" class="type-rows"></div>
+        <button type="button" class="btn btn-secondary btn-sm mt-1" onclick="addTypeRow()">➕ Add Type</button>
+      </div>
+      <div class="flex-end mt-2">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-collection')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule Transport -->
+<div class="modal-overlay hidden" id="modal-add-transport">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🚛 Schedule Pickup</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-transport')">✕</button>
+    </div>
+    <div id="trans-modal-alert"></div>
+    <form onsubmit="submitTransport(event)">
+      <div class="form-group">
+        <label>Waste Bin</label>
+        <select id="trans-bin" required><option value="">— Select a bin —</option></select>
+      </div>
+      <div class="form-group"><label>Schedule Date &amp; Time</label><input type="datetime-local" id="trans-time" required /></div>
+      <div class="flex-end mt-2">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-transport')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Schedule</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Ask Question -->
+<div class="modal-overlay hidden" id="modal-add-qa">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>❓ Ask a Question</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-qa')">✕</button>
+    </div>
+    <div id="qa-modal-alert"></div>
+    <form onsubmit="submitQA(event)">
+      <div class="form-group"><label>Your Question</label><textarea id="qa-content" required placeholder="Type your question here…"></textarea></div>
+      <div class="flex-end mt-2">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-qa')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script>
+let user = null;
+let allCollections = [], allTransports = [], allBins = [], recyclableTypes = [];
+let charts = {};
+
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// ── Init ──
+(async () => {
+  const me = await guardAuth('household');
+  user = me.user;
+  document.getElementById('sidebar-username').textContent = `🏠 ${user.name}`;
+  await Promise.all([loadCollections(), loadTransports(), loadBins(), loadTypes()]);
+  loadOverview();
+})();
+
+// ── Section nav ──
+function showSection(name, el) {
+  document.querySelectorAll('.page-body section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(`sec-${name}`)?.classList.remove('hidden');
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  el?.classList.add('active');
+  document.getElementById('topbar-title').textContent = el?.textContent.trim() || name;
+  if (name === 'analytics') renderCharts();
+  if (name === 'profile')   populateProfile();
+  if (name === 'qa')        loadQA();
+}
+
+// ── Data loaders ──
+async function loadCollections() {
+  allCollections = await apiFetch(`${API.collections}?action=list`);
+  renderCollections(allCollections);
+}
+async function loadTransports() {
+  allTransports = await apiFetch(`${API.transportation}?action=list`);
+  renderTransports(allTransports);
+}
+async function loadBins() {
+  allBins = await apiFetch(`${API.wastebins}?action=list`);
+  renderBins(allBins);
+  const sel = document.getElementById('trans-bin');
+  allBins.forEach(b => {
+    const o = new Option(`${b.location} (${b.type})`, b.wastebin_id);
+    sel.appendChild(o);
+  });
+}
+async function loadTypes() {
+  recyclableTypes = await apiFetch(`${API.collections}?action=types`);
+}
+
+// ── Overview ──
+function loadOverview() {
+  document.getElementById('ov-collections').textContent = allCollections.length;
+  const totalKg = allCollections.reduce((s, c) => s + parseFloat(c.amount), 0);
+  document.getElementById('ov-weight').textContent = totalKg.toFixed(1) + ' kg';
+  document.getElementById('ov-trips').textContent = allTransports.filter(t => t.status === 'scheduled').length;
+}
+
+// ── Collections ──
+function renderCollections(data) {
+  const t = document.getElementById('col-table');
+  if (!data.length) { t.innerHTML = '<p class="text-muted">No collections yet.</p>'; return; }
+  t.innerHTML = `<table><thead><tr><th>ID</th><th>Date</th><th>Total (kg)</th><th>Types</th></tr></thead><tbody>
+    ${data.map(c => `<tr>
+      <td>${c.collection_id}</td>
+      <td>${fmtDate(c.date)}</td>
+      <td>${parseFloat(c.amount).toFixed(2)}</td>
+      <td>${(c.breakdown||[]).map(b => `<span class="badge ${b.is_toxic=='1'?'badge-red':'badge-green'}">${b.category} ${b.weight}kg</span>`).join(' ')}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+
+  // Update overview table too
+  const ov = document.getElementById('ov-recent-table');
+  const recent = [...data].slice(0, 5);
+  ov.innerHTML = `<table><thead><tr><th>Date</th><th>Amount (kg)</th><th>Types</th></tr></thead><tbody>
+    ${recent.map(c => `<tr>
+      <td>${fmtDate(c.date)}</td>
+      <td>${parseFloat(c.amount).toFixed(2)}</td>
+      <td>${(c.breakdown||[]).map(b=>`<span class="badge badge-green">${b.category}</span>`).join(' ')}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+  document.getElementById('ov-qa').textContent = '—'; // updated after qa loads
+}
+
+function filterCollections() {
+  const q = document.getElementById('col-search').value.toLowerCase();
+  renderCollections(q ? allCollections.filter(c => c.date?.includes(q)) : allCollections);
+}
+
+function addTypeRow() {
+  const container = document.getElementById('col-type-rows');
+  const div = document.createElement('div');
+  div.className = 'type-row';
+  div.innerHTML = `
+    <select class="type-select">
+      <option value="">— Type —</option>
+      ${recyclableTypes.map(t => `<option value="${t.recyclable_type_id}">${t.category}${t.is_toxic=='1'?' ☣️':''}</option>`).join('')}
+    </select>
+    <input type="number" step="0.01" placeholder="kg" class="type-weight" min="0" />
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(div);
+}
+
+async function submitCollection(e) {
+  e.preventDefault();
+  const types = [...document.querySelectorAll('.type-row')].map(r => ({
+    recyclable_type_id: r.querySelector('.type-select').value,
+    weight: r.querySelector('.type-weight').value,
+  })).filter(t => t.recyclable_type_id && t.weight);
+  try {
+    await apiFetch(`${API.collections}?action=create`, {
+      method: 'POST',
+      body: JSON.stringify({
+        date:   document.getElementById('col-date').value,
+        amount: document.getElementById('col-amount').value,
+        types,
+      })
+    });
+    closeModal('modal-add-collection');
+    showAlert('global-alert', 'Collection added!');
+    document.getElementById('col-type-rows').innerHTML = '';
+    await loadCollections();
+  } catch (err) { showAlert('col-modal-alert', err.message, 'error'); }
+}
+
+// ── Transportation ──
+function renderTransports(data) {
+  const t = document.getElementById('trans-table');
+  if (!data.length) { t.innerHTML = '<p class="text-muted">No pickups scheduled.</p>'; return; }
+  t.innerHTML = `<table><thead><tr><th>Bin Location</th><th>Type</th><th>Scheduled</th><th>Status</th></tr></thead><tbody>
+    ${data.map(r => `<tr>
+      <td>${r.bin_location}</td>
+      <td>${r.bin_type}</td>
+      <td>${fmtDateTime(r.schedule_time)}</td>
+      <td>${statusBadge(r.status)}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function filterTransportation() {
+  const q = document.getElementById('trans-search').value.toLowerCase();
+  renderTransports(q ? allTransports.filter(r => r.bin_location?.toLowerCase().includes(q)) : allTransports);
+}
+
+async function submitTransport(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.transportation}?action=create`, {
+      method: 'POST',
+      body: JSON.stringify({
+        wastebin_id:   document.getElementById('trans-bin').value,
+        schedule_time: document.getElementById('trans-time').value.replace('T',' ') + ':00',
+      })
+    });
+    closeModal('modal-add-transport');
+    showAlert('global-alert', 'Pickup scheduled!');
+    await loadTransports();
+  } catch (err) { showAlert('trans-modal-alert', err.message, 'error'); }
+}
+
+// ── Bins ──
+function renderBins(data) {
+  const t = document.getElementById('bin-table');
+  if (!data.length) { t.innerHTML = '<p class="text-muted">No bins found.</p>'; return; }
+  const typeBadge = { general:'badge-grey', recycling:'badge-green', organic:'badge-blue', hazardous:'badge-red' };
+  t.innerHTML = `<table><thead><tr><th>ID</th><th>Location</th><th>Type</th><th>Capacity (L)</th></tr></thead><tbody>
+    ${data.map(b => `<tr>
+      <td>${b.wastebin_id}</td>
+      <td>${b.location}</td>
+      <td><span class="badge ${typeBadge[b.type]||'badge-grey'}">${b.type}</span></td>
+      <td>${b.capacity}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function filterBins() {
+  const q = document.getElementById('bin-search').value.toLowerCase();
+  renderBins(q ? allBins.filter(b => b.location.toLowerCase().includes(q) || b.type.includes(q)) : allBins);
+}
+
+// ── Q&A ──
+async function loadQA() {
+  const data = await apiFetch(`${API.qa}?action=list`);
+  document.getElementById('ov-qa').textContent = data.length;
+  const container = document.getElementById('qa-list');
+  if (!data.length) { container.innerHTML = '<p class="text-muted">No questions yet. Ask one!</p>'; return; }
+  container.innerHTML = data.map(q => `
+    <div class="card qa-thread" style="padding:0;margin-bottom:1rem;">
+      <div class="qa-question">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+          <span class="text-muted" style="font-size:.8rem;">${fmtDateTime(q.date)}</span>
+          ${statusBadge(q.status)}
+        </div>
+        <p>${q.content}</p>
+      </div>
+      ${q.replies?.length ? `<div class="qa-replies">${q.replies.map(r=>`
+        <div class="qa-reply">
+          <div class="reply-meta">🛡️ ${r.admin_username} · ${fmtDateTime(r.replied_at)}</div>
+          ${r.content}
+        </div>`).join('')}</div>` : '<div class="qa-replies"><p class="text-muted" style="font-size:.85rem;">Awaiting admin reply…</p></div>'}
+    </div>`).join('');
+}
+
+async function submitQA(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.qa}?action=create`, { method: 'POST', body: JSON.stringify({ content: document.getElementById('qa-content').value }) });
+    closeModal('modal-add-qa');
+    showAlert('global-alert', 'Question submitted!');
+    document.getElementById('qa-content').value = '';
+    await loadQA();
+  } catch (err) { showAlert('qa-modal-alert', err.message, 'error'); }
+}
+
+// ── Analytics ──
+async function renderCharts() {
+  const [timeData, typeData, toxicData] = await Promise.all([
+    apiFetch(`${API.analytics}?action=collection_over_time`),
+    apiFetch(`${API.analytics}?action=by_type`),
+    apiFetch(`${API.analytics}?action=toxic_vs_nontoxic`),
+  ]);
+
+  if (charts.time)  charts.time.destroy();
+  if (charts.type)  charts.type.destroy();
+  if (charts.toxic) charts.toxic.destroy();
+
+  charts.time = new Chart(document.getElementById('chart-time'), {
+    type: 'line',
+    data: {
+      labels: timeData.map(d => d.month),
+      datasets: [{ label: 'kg', data: timeData.map(d => d.total), borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,.15)', fill: true, tension: 0.3 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+
+  const colors = ['#4caf50','#2196f3','#ff9800','#9c27b0','#f44336','#009688','#795548','#607d8b'];
+  charts.type = new Chart(document.getElementById('chart-type'), {
+    type: 'bar',
+    data: {
+      labels: typeData.map(d => d.category),
+      datasets: [{ label: 'kg', data: typeData.map(d => d.total_weight), backgroundColor: colors }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  charts.toxic = new Chart(document.getElementById('chart-toxic'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Non-Toxic', 'Toxic'],
+      datasets: [{ data: [toxicData.non_toxic, toxicData.toxic], backgroundColor: ['#4caf50','#f44336'] }]
+    },
+    options: { responsive: true }
+  });
+}
+
+// ── Profile ──
+function populateProfile() {
+  document.getElementById('prof-name').value    = user.name    || '';
+  document.getElementById('prof-address').value = user.address || '';
+  document.getElementById('prof-phone').value   = user.phone_number || '';
+}
+
+async function updateProfile(e) {
+  e.preventDefault();
+  const body = {
+    name:         document.getElementById('prof-name').value,
+    address:      document.getElementById('prof-address').value,
+    phone_number: document.getElementById('prof-phone').value,
+  };
+  const pw = document.getElementById('prof-password').value;
+  if (pw) body.password = pw;
+  try {
+    await apiFetch(`${API.households}?action=update&id=${user.household_id}`, { method: 'PUT', body: JSON.stringify(body) });
+    showAlert('profile-alert', 'Profile updated!');
+  } catch (err) { showAlert('profile-alert', err.message, 'error'); }
+}
+
+async function logout() {
+  await apiFetch(`${API.auth}?action=logout`, { method: 'POST' });
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

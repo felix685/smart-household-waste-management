@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Household Waste Management System</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="logo"><span>♻️</span></div>
+    <h2>Smart Household Waste<br>Management System</h2>
+
+    <!-- Role tabs -->
+    <div class="tab-switch">
+      <button class="active" onclick="setRole('household')">🏠 Household</button>
+      <button onclick="setRole('admin')">🛡️ Admin</button>
+    </div>
+
+    <!-- Action tabs -->
+    <div class="tab-switch" style="margin-bottom:1rem;">
+      <button class="active" onclick="setAction('login')">Login</button>
+      <button onclick="setAction('register')">Register</button>
+    </div>
+
+    <div id="alert-area"></div>
+
+    <!-- Household Login -->
+    <form id="form-household-login" onsubmit="submitHouseholdLogin(event)">
+      <div class="form-group"><label>Email</label><input type="email" id="hl-email" required placeholder="your@email.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="hl-password" required placeholder="••••••••" /></div>
+      <button class="btn btn-primary btn-block" type="submit">Login</button>
+    </form>
+
+    <!-- Household Register -->
+    <form id="form-household-register" class="hidden" onsubmit="submitHouseholdRegister(event)">
+      <div class="form-group"><label>Full Name / Family Name</label><input type="text" id="hr-name" required placeholder="Chen Family" /></div>
+      <div class="form-group"><label>Address</label><input type="text" id="hr-address" required placeholder="12 Maple St, Taipei" /></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" id="hr-phone" required placeholder="0912-345-678" /></div>
+      <div class="form-group"><label>Email</label><input type="email" id="hr-email" required placeholder="your@email.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="hr-password" required placeholder="Min 8 characters" /></div>
+      <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+    </form>
+
+    <!-- Admin Login -->
+    <form id="form-admin-login" class="hidden" onsubmit="submitAdminLogin(event)">
+      <div class="form-group"><label>Email</label><input type="email" id="al-email" required placeholder="admin@wastesystem.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="al-password" required placeholder="••••••••" /></div>
+      <button class="btn btn-accent btn-block" type="submit">Admin Login</button>
+    </form>
+
+    <!-- Admin Register -->
+    <form id="form-admin-register" class="hidden" onsubmit="submitAdminRegister(event)">
+      <div class="form-group"><label>Username</label><input type="text" id="ar-username" required placeholder="adminuser" /></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ar-email" required placeholder="admin@wastesystem.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="ar-password" required placeholder="Min 8 characters" /></div>
+      <button class="btn btn-accent btn-block" type="submit">Register Admin</button>
+    </form>
+
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script>
+let currentRole   = 'household';
+let currentAction = 'login';
+
+function setRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.tab-switch:first-of-type button').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && role === 'household') || (i === 1 && role === 'admin'));
+  });
+  renderForm();
+}
+
+function setAction(action) {
+  currentAction = action;
+  document.querySelectorAll('.tab-switch:nth-of-type(2) button').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && action === 'login') || (i === 1 && action === 'register'));
+  });
+  renderForm();
+}
+
+function renderForm() {
+  const forms = ['form-household-login','form-household-register','form-admin-login','form-admin-register'];
+  forms.forEach(f => document.getElementById(f).classList.add('hidden'));
+  const id = `form-${currentRole}-${currentAction}`;
+  document.getElementById(id)?.classList.remove('hidden');
+}
+
+async function submitHouseholdLogin(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.auth}?action=login_household`, {
+      method: 'POST',
+      body: JSON.stringify({ email: document.getElementById('hl-email').value, password: document.getElementById('hl-password').value })
+    });
+    window.location.href = 'dashboard.html';
+  } catch (err) { showAlert('alert-area', err.message, 'error'); }
+}
+
+async function submitHouseholdRegister(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.auth}?action=register_household`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name:         document.getElementById('hr-name').value,
+        address:      document.getElementById('hr-address').value,
+        phone_number: document.getElementById('hr-phone').value,
+        email:        document.getElementById('hr-email').value,
+        password:     document.getElementById('hr-password').value,
+      })
+    });
+    showAlert('alert-area', 'Account created! Please login.', 'success');
+    setAction('login');
+  } catch (err) { showAlert('alert-area', err.message, 'error'); }
+}
+
+async function submitAdminLogin(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.auth}?action=login_admin`, {
+      method: 'POST',
+      body: JSON.stringify({ email: document.getElementById('al-email').value, password: document.getElementById('al-password').value })
+    });
+    window.location.href = 'admin.html';
+  } catch (err) { showAlert('alert-area', err.message, 'error'); }
+}
+
+async function submitAdminRegister(e) {
+  e.preventDefault();
+  try {
+    await apiFetch(`${API.auth}?action=register_admin`, {
+      method: 'POST',
+      body: JSON.stringify({
+        username: document.getElementById('ar-username').value,
+        email:    document.getElementById('ar-email').value,
+        password: document.getElementById('ar-password').value,
+      })
+    });
+    showAlert('alert-area', 'Admin account created! Please login.', 'success');
+    setAction('login');
+  } catch (err) { showAlert('alert-area', err.message, 'error'); }
+}
+
+// Auto-redirect if already logged in
+(async () => {
+  try {
+    const me = await apiFetch(`${API.auth}?action=me`);
+    window.location.href = me.role === 'admin' ? 'admin.html' : 'dashboard.html';
+  } catch {}
+})();
+</script>
+</body>
+</html>
